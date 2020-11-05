@@ -6,7 +6,7 @@ const router = express.Router();
 
 
 //CREATE
-router.post('/', async (req, res, next) => {
+router.post('/account', async (req, res, next) => {
 
     try {
         const newAccount = new accountModel(req.body);
@@ -29,7 +29,7 @@ const isValidDeposit = (deposit) => {
 }
 
 // Item 4 - Registrar um depósito
-router.patch('/deposito', async (req, res, next) => {
+router.patch('/account/deposito', async (req, res, next) => {
     try {
         const deposit = req.body;
         if (!isValidDeposit(deposit)) {
@@ -58,7 +58,7 @@ router.patch('/deposito', async (req, res, next) => {
 
 
 // Item 5 - Registrar um saque
-router.patch('/saque', async (req, res, next) => {
+router.patch('/account/saque', async (req, res, next) => {
     try {
         const withdraw = req.body;
         if (!isValidDeposit(withdraw)) {
@@ -92,7 +92,7 @@ router.patch('/saque', async (req, res, next) => {
 })
 
 // Item 7 - Consultar uma conta
-router.get('/:agencia/:conta', async (req, res, next) => {
+router.get('/account/:agencia/:conta', async (req, res, next) => {
     try {
 
         if (req.params.agencia == null || req.params.conta == null) {
@@ -112,10 +112,10 @@ router.get('/:agencia/:conta', async (req, res, next) => {
     } catch (error) {
         next(error);
     }
-})
+});
 
 // Item 8 - Transferência entre contas
-router.patch('/transferencia', async (req, res, next) => {
+router.patch('/account/transferencia', async (req, res, next) => {
     try {
 
         const numContaOrigem = parseInt(req.body.contaOrigem);
@@ -172,6 +172,98 @@ router.patch('/transferencia', async (req, res, next) => {
 
         res.send(sourceAccount);
 
+    } catch (error) {
+        next(error);
+    }
+});
+
+
+
+// Item 9 - Consultar saldo médio da agência
+router.get('/saldomedioagencia/:agencia', async (req, res, next) => {
+    try {
+
+        if (req.params.agencia == null || req.params.agencia === '' ) {
+            res.status(400).send('Número da agência é requerido');
+            return;
+        }
+
+        const numAgencia = req.params.agencia;
+        const accounts = await accountModel.find({"agencia": numAgencia});
+
+        if (accounts.length === 0) {
+            res.status(400).send('Agência inválida');
+            return;
+        }
+
+        const totalAccounts = accounts.length;
+        const totalBalance = accounts.reduce((acc, curr) =>{
+            return acc + curr.balance;
+        },0);
+
+        res.send({
+            totalAccounts,
+            totalBalance,
+            averageBalance:totalBalance/ totalAccounts
+        });
+
+    } catch (error) {
+        next('saldomedio: '+ error);
+    }
+});
+
+
+
+// Item 10 - Consultar clientes com menor saldo
+router.get('/monoresbalances/:quantidade', async (req, res, next) => {
+    try {
+
+        if (req.params.quantidade == null || req.params.quantidade === '' ) {
+            res.status(400).send('Número de resultados é obrigatório');
+            return;
+        }
+
+        const quantidade  = req.params.quantidade;
+
+        console.log('quantidade: '+ quantidade);
+        const accounts = await accountModel.find({},{_id:0, agencia:1, conta:1,balance:1});
+
+        const orderedAccounts = accounts.sort((a,b)=>{
+            return a.balance - b.balance;
+        });
+
+       res.send(orderedAccounts.slice(0,quantidade));
+
+    } catch (error) {
+        next('saldomedio: '+ error);
+    }
+});
+
+
+
+// Item 11 - Consultar clientes com menor saldo
+router.get('/maioresbalances/:quantidade', async (req, res, next) => {
+    try {
+
+        if (req.params.quantidade == null || req.params.quantidade === '' ) {
+            res.status(400).send('Número de resultados é obrigatório');
+            return;
+        }
+
+        const quantidade  = req.params.quantidade;
+
+        console.log('quantidade: '+ quantidade);
+        const accounts = await accountModel.find({},{_id:0, agencia:1, conta:1,balance:1, name:1});
+
+        const orderedAccounts = accounts.sort((a,b)=>{
+            if(a.balance === b.balance){
+                return a.name.localeCompare(b.name);
+            }else {
+                return b.balance - a.balance;
+            }
+        });
+
+        res.send(orderedAccounts.slice(0,quantidade));
 
     } catch (error) {
         next(error);
@@ -179,8 +271,9 @@ router.patch('/transferencia', async (req, res, next) => {
 });
 
 
+
 //RETRIEVE
-router.get('/', async (req, res, next) => {
+router.get('/account', async (req, res, next) => {
     try {
         const account = await accountModel.find({});
         res.send(account);
@@ -192,7 +285,7 @@ router.get('/', async (req, res, next) => {
 
 
 //Search
-router.get('/:id', async (req, res, next) => {
+router.get('/account/:id', async (req, res, next) => {
     try {
         const id = req.params.id;
         const account = await accountModel.findById({_id: id});
@@ -210,7 +303,7 @@ router.get('/:id', async (req, res, next) => {
 
 
 //UPDATE
-router.patch('/:id', async (req, res, next) => {
+router.patch('/account/:id', async (req, res, next) => {
     try {
         const id = req.params.id;
         const updatedAccount = await accountModel.findByIdAndUpdate({_id: id}, req.body, {new: true});
@@ -226,7 +319,7 @@ router.patch('/:id', async (req, res, next) => {
     }
 })
 
-router.patch('/deposit', async (req, res, next) => {
+router.patch('/account/deposit', async (req, res, next) => {
     try {
         const deposit = req.body;
         if (!deposit.agencia || deposit.conta == null || deposit.valor == null) {
@@ -240,7 +333,7 @@ router.patch('/deposit', async (req, res, next) => {
 
 
 //DELETE u
-router.delete('/:id', async (req, res, next) => {
+router.delete('/account/:id', async (req, res, next) => {
     try {
         const id = req.params.id;
         const accountToDelete = await accountModel.findByIdAndDelete({_id: id});

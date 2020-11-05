@@ -24,7 +24,7 @@ import accountRouter from './routes/accountRouter.js';
 
 const app = express();
 app.use(express.json());
-app.use('/account',accountRouter);
+app.use('/',accountRouter);
 
 
 app.listen(3000, () => {
