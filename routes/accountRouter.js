@@ -91,7 +91,7 @@ router.patch('/account/saque', async (req, res, next) => {
     }
 })
 
-// Item 7 - Consultar uma conta
+
 router.get('/account/:agencia/:conta', async (req, res, next) => {
     try {
 
@@ -113,6 +113,29 @@ router.get('/account/:agencia/:conta', async (req, res, next) => {
         next(error);
     }
 });
+
+
+router.delete('/account/:agencia/:conta', async (req, res, next) => {
+    try {
+        if (req.params.agencia == null || req.params.conta == null) {
+            res.status(400).send('Dados da Conta inválidos');
+            return;
+        }
+
+        const agencia = parseInt(req.params.agencia);
+        const conta = parseInt(req.params.conta);
+
+        await accountModel.deleteOne({agencia: agencia, conta: conta});
+
+        const contasAgencia = await accountModel.find({agencia: agencia});
+
+        res.send({agencia: agencia, totalContas:contasAgencia.length});
+
+    } catch (error) {
+        next(error);
+    }
+});
+
 
 // Item 8 - Transferência entre contas
 router.patch('/account/transferencia', async (req, res, next) => {
@@ -178,12 +201,11 @@ router.patch('/account/transferencia', async (req, res, next) => {
 });
 
 
-
 // Item 9 - Consultar saldo médio da agência
 router.get('/saldomedioagencia/:agencia', async (req, res, next) => {
     try {
 
-        if (req.params.agencia == null || req.params.agencia === '' ) {
+        if (req.params.agencia == null || req.params.agencia === '') {
             res.status(400).send('Número da agência é requerido');
             return;
         }
@@ -197,79 +219,122 @@ router.get('/saldomedioagencia/:agencia', async (req, res, next) => {
         }
 
         const totalAccounts = accounts.length;
-        const totalBalance = accounts.reduce((acc, curr) =>{
+        const totalBalance = accounts.reduce((acc, curr) => {
             return acc + curr.balance;
-        },0);
+        }, 0);
 
         res.send({
             totalAccounts,
             totalBalance,
-            averageBalance:totalBalance/ totalAccounts
+            averageBalance: totalBalance / totalAccounts
         });
 
     } catch (error) {
-        next('saldomedio: '+ error);
+        next('saldomedio: ' + error);
     }
 });
 
 
-
 // Item 10 - Consultar clientes com menor saldo
-router.get('/monoresbalances/:quantidade', async (req, res, next) => {
+router.get('/menoresbalances/:quantidade', async (req, res, next) => {
     try {
 
-        if (req.params.quantidade == null || req.params.quantidade === '' ) {
+        if (req.params.quantidade == null || req.params.quantidade === '') {
             res.status(400).send('Número de resultados é obrigatório');
             return;
         }
 
-        const quantidade  = req.params.quantidade;
+        const quantidade = req.params.quantidade;
 
-        console.log('quantidade: '+ quantidade);
-        const accounts = await accountModel.find({},{_id:0, agencia:1, conta:1,balance:1});
+        console.log('quantidade: ' + quantidade);
+        const accounts = await accountModel.find({}, {_id: 0, agencia: 1, conta: 1, balance: 1});
 
-        const orderedAccounts = accounts.sort((a,b)=>{
+        const orderedAccounts = accounts.sort((a, b) => {
             return a.balance - b.balance;
         });
 
-       res.send(orderedAccounts.slice(0,quantidade));
+        res.send(orderedAccounts.slice(0, quantidade));
 
     } catch (error) {
-        next('saldomedio: '+ error);
+        next('saldomedio: ' + error);
     }
 });
-
 
 
 // Item 11 - Consultar clientes com menor saldo
 router.get('/maioresbalances/:quantidade', async (req, res, next) => {
     try {
 
-        if (req.params.quantidade == null || req.params.quantidade === '' ) {
+        if (req.params.quantidade == null || req.params.quantidade === '') {
             res.status(400).send('Número de resultados é obrigatório');
             return;
         }
 
-        const quantidade  = req.params.quantidade;
+        const quantidade = req.params.quantidade;
 
-        console.log('quantidade: '+ quantidade);
-        const accounts = await accountModel.find({},{_id:0, agencia:1, conta:1,balance:1, name:1});
+        console.log('quantidade: ' + quantidade);
+        const accounts = await accountModel.find({}, {_id: 0, agencia: 1, conta: 1, balance: 1, name: 1});
 
-        const orderedAccounts = accounts.sort((a,b)=>{
-            if(a.balance === b.balance){
+        const orderedAccounts = accounts.sort((a, b) => {
+            if (a.balance === b.balance) {
                 return a.name.localeCompare(b.name);
-            }else {
+            } else {
                 return b.balance - a.balance;
             }
         });
 
-        res.send(orderedAccounts.slice(0,quantidade));
+        res.send(orderedAccounts.slice(0, quantidade));
 
     } catch (error) {
         next(error);
     }
 });
 
+
+// Item 12 - transferir para agencia Private
+router.patch('/agenciaprivate', async (req, res, next) => {
+    try {
+
+        const agenciasSet = new Set();
+        const accounts = await accountModel.find({});
+        const topClients = [];
+
+
+        accounts.forEach(account => {
+            agenciasSet.add(account.agencia);
+        })
+        const agencias = [...agenciasSet];
+
+        agencias.forEach(agencia => {
+
+            const clientesAgencia = accounts.filter(account => {
+                return account.agencia === agencia;
+            })
+
+            const agenciaTopClient = clientesAgencia.reduce((a, b) => {
+                return a.balance > b.balance ? a : b;
+            })
+
+            topClients.push(agenciaTopClient);
+            updateAccount(agenciaTopClient);
+        })
+
+
+        res.send(topClients);
+
+    } catch (error) {
+        next(error);
+    }
+});
+
+async function updateAccount(account) {
+    try {
+        account.agencia = 99;
+        await accountModel.findByIdAndUpdate({_id: account.id}, account);
+    } catch (error) {
+        next(error);
+    }
+}
 
 
 //RETRIEVE
