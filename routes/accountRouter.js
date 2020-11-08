@@ -1,6 +1,7 @@
 import express from 'express'
 import {accountModel} from "../models/AccountModel.js";
 
+
 const router = express.Router();
 //const app = express();
 
@@ -73,13 +74,15 @@ router.patch('/account/saque', async (req, res, next) => {
             return;
         }
 
+        const withdrawTotalValue = parseInt(withdraw.valor) + 1;
 
-        if (parseInt(withdraw.valor) > parseInt(targetAccount.balance)) {
+
+        if (withdrawTotalValue > parseInt(targetAccount.balance)) {
             res.status(400).send('Saldo da conta insuficiente');
             return;
         }
 
-        targetAccount.balance -= parseInt(withdraw.valor);
+        targetAccount.balance -= withdrawTotalValue;
         console.log(targetAccount);
         const query = {"agencia": withdraw.agencia, "conta": withdraw.conta};
         await accountModel.findOneAndUpdate(query, targetAccount);

@@ -1,31 +1,46 @@
 import express from 'express';
 import mongoose from 'mongoose';
-import accountRouter from './routes/accountRouter.js';
+import router from './routes/accountRouter.js';
+import dotenv from 'dotenv';
+const app = express();
+app.use(express.json());
+app.use(router);
 
-// using IIFE
+
+dotenv.config({
+    path: process.env.NODE_ENV === "development" ? ".env.development" : ".env"
+})
+
+
+console.log(process.env.DB_PASS);
+console.log(process.env.DB_USER);
+console.log(process.env.DB_HOST);
+
 (async () => {
     try {
-        await mongoose.connect('mongodb://mongoserver/igti', {
-            auth: {
-                authSource: "admin"
-            },
-            user: "root",
-            pass: "changeme!",
-            useNewUrlParser: true,
-            useUnifiedTopology: true,
-            useFindAndModify: false
-        });
-        console.log('database connected');
+        if (process.env.NODE_ENV === 'development') {
+
+            console.log('Connecting to Local Database');
+            await mongoose.connect(process.env.DB_HOST, {
+                auth: {
+                    authSource: "admin"
+                },
+                user: process.env.DB_USER,
+                pass: process.env.DB_PASS,
+                useNewUrlParser: true,
+                useUnifiedTopology: true
+            });
+            console.log('Local database connected!');
+        } else /*if (process.env.NODE_ENV === 'development')*/ {
+            console.log('Connecting to cloud Database:' + process.env.DB_HOST);
+            await mongoose.connect(process.env.DB_HOST, { useNewUrlParser: true, useUnifiedTopology: true });
+            console.log('Cloud database connected!');
+        }
     } catch (error) {
         console.log('MongoDb Connection failure:' + error);
     }
+
 })();
-
-
-const app = express();
-app.use(express.json());
-app.use('/',accountRouter);
-
 
 app.listen(3000, () => {
     console.log('Api started an listenning on port 3000')
