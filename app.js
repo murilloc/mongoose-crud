@@ -43,6 +43,6 @@ console.log(process.env.DB_HOST);
 })();
 
 app.listen(process.env.PORT, () => {
-    console.log('Api started and listening requestes....')
+    console.log('Api started and listening requests....')
 })
 
