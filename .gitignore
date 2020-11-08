@@ -13,5 +13,5 @@
 /build
 
 # misc
-.env
-.env.developme
+/.env
+/.env.developme
