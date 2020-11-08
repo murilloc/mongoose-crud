@@ -1,1 +1,1 @@
-web: node -r dotnv/config --experimental-modules app.js
+web: node -r app.js
