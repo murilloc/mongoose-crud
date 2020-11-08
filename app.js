@@ -42,7 +42,7 @@ console.log(process.env.DB_HOST);
 
 })();
 
-app.listen(3000, () => {
+app.listen(process.env.PORT, () => {
     console.log('Api started an listenning on port 3000')
 })
 
